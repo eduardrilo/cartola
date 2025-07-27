@@ -135,6 +135,7 @@ if uploaded_file and password:
     df.to_csv(archivo_csv, index=False)
 
 # Cargar datos históricos
+os.makedirs("historico", exist_ok=True)
 archivos = [f for f in os.listdir("historico") if f.endswith(".csv")]
 if not archivos:
     st.warning("⚠️ No hay cartolas disponibles.")
