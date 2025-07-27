@@ -152,12 +152,6 @@ if uploaded_file is not None and password:
         st.error(f"❌ Error procesando la cartola: {e}")
 
 
-    if not os.path.exists(nombre_archivo):
-        df.to_csv(nombre_archivo, index=False)
-        st.success(f"✅ Cartola guardada como {nombre_archivo}")
-    else:
-        st.info(f"ℹ️ Cartola ya existe para el periodo {periodo_referencia}. No se guardó nuevamente.")
-
 
 archivos = [f for f in os.listdir("historico") if f.endswith(".csv")]
 if not archivos:
