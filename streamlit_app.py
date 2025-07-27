@@ -10,6 +10,17 @@ from dotenv import load_dotenv
 load_dotenv()
 st.set_page_config(page_title="Cartola Santander", layout="wide")
 st.title("🧾 Clasificador de Gastos Cartola Santander")
+with st.expander("🧹 Eliminar cartolas anteriores"):
+    archivos_existentes = [f for f in os.listdir("historico") if f.endswith(".csv")]
+    if archivos_existentes:
+        cartolas_a_borrar = st.multiselect("Selecciona las cartolas que quieres borrar:", archivos_existentes)
+        if st.button("🗑️ Borrar seleccionadas"):
+            for archivo in cartolas_a_borrar:
+                os.remove(os.path.join("historico", archivo))
+            st.success(f"✅ {len(cartolas_a_borrar)} cartola(s) eliminada(s). Recarga la página para ver los cambios.")
+    else:
+        st.info("No hay cartolas guardadas aún.")
+
 
 def clasificar_categoria(descripcion):
     descripcion = str(descripcion).upper()
