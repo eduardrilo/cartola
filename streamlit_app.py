@@ -1,3 +1,18 @@
+import os
+import re
+import glob
+import pdfplumber
+import pandas as pd
+import streamlit as st
+import altair as alt
+import plotly.express as px
+from dotenv import load_dotenv
+
+load_dotenv()
+st.set_page_config(page_title="Cartola Santander", layout="wide")
+st.title("🧾 Clasificador de Gastos Cartola Santander")
+
+
 # ----------------------------------
 # FUNCIONES INTERNAS
 # ----------------------------------
