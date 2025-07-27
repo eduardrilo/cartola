@@ -5,10 +5,12 @@ import pandas as pd
 import streamlit as st
 import altair as alt
 import plotly.express as px
+from dotenv import load_dotenv
 
-# CONFIG
-PDF_PATH = "cartolas/80_13675_0350262800063301494_20250723.pdf"
-PASSWORD = "18538209"
+# Cargar variables del entorno
+load_dotenv()
+PDF_PATH = os.getenv("PDF_PATH")
+PASSWORD = os.getenv("PDF_PASSWORD")
 
 # Clasificación mejorada
 def clasificar_categoria(descripcion):
