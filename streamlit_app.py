@@ -125,24 +125,31 @@ if uploaded_file and password:
         # Asegúrate de que la columna Fecha esté en formato datetime
     df["Fecha"] = pd.to_datetime(df["Fecha"], errors='coerce')
 
-    # Extraer la fecha del nombre del PDF
-    match = re.search(r"_(\d{8})\.pdf$", nombre_pdf)
-    if match:
-        fecha_pdf = datetime.strptime(match.group(1), "%Y%m%d")
-        periodo_referencia = obtener_periodo_facturacion_custom(fecha_pdf)
-    else:
-        st.error("❌ No se pudo extraer la fecha del nombre del archivo PDF.")
-        st.stop()
+    # Extraer la fecha del nombre del PDF y guardar CSV
+if uploaded_file is not None and password:
+    nombre_pdf = uploaded_file.name  # ✅ Definimos nombre del PDF
+
+    try:
+        match = re.search(r"_(\d{8})\.pdf$", nombre_pdf)
+        if match:
+            fecha_pdf = datetime.strptime(match.group(1), "%Y%m%d")
+            periodo_referencia = obtener_periodo_facturacion_custom(fecha_pdf)
+        else:
+            st.error("❌ No se pudo extraer la fecha del nombre del archivo PDF.")
+            st.stop()
+
+        df["Periodo"] = periodo_referencia
+
+        os.makedirs("historico", exist_ok=True)
+        nombre_archivo = f"historico/cartola_{periodo_referencia}.csv"
+        if not os.path.exists(nombre_archivo):
+            df.to_csv(nombre_archivo, index=False)
+            st.success(f"✅ Cartola guardada como {nombre_archivo}")
+        else:
+            st.info(f"ℹ️ Cartola ya existe para el periodo {periodo_referencia}. No se guardó nuevamente.")
     
-    df["Periodo"] = periodo_referencia
-    
-    os.makedirs("historico", exist_ok=True)
-    nombre_archivo = f"historico/cartola_{periodo_referencia}.csv"
-    if not os.path.exists(nombre_archivo):
-        df.to_csv(nombre_archivo, index=False)
-        st.success(f"✅ Cartola guardada como {nombre_archivo}")
-    else:
-        st.info(f"ℹ️ Cartola ya existe para el periodo {periodo_referencia}. No se guardó nuevamente.")
+    except Exception as e:
+        st.error(f"❌ Error procesando la cartola: {e}")
 
 
     if not os.path.exists(nombre_archivo):
