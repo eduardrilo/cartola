@@ -70,25 +70,42 @@ def clasificar_categoria(descripcion):
 def extraer_movimientos(texto):
     movimientos = []
     lineas = texto.splitlines()[8:]
+
     for linea in lineas:
         if not "$" in linea:
             continue
+
         match = re.search(r"(\d{2}/\d{2}/\d{4}).*?\$[\s-]*([\d.]+)", linea)
         if not match:
             continue
+
         fecha = match.group(1)
         monto = float(match.group(2).replace(".", ""))
         if "NOTA DE CREDITO" in linea.upper():
             monto *= -1
-        desc = re.sub(r".*?\d{4} ", "", linea).split("$")[0].strip()
-        categoria = clasificar_categoria(desc)
+
+        # Extraer descripción
+        partes = linea.split(fecha)
+        if len(partes) > 1:
+            desc_bruta = partes[1].split("$")[0].strip()
+        else:
+            desc_bruta = "Revisar"
+
+        # Fallback si queda vacía
+        if not desc_bruta or desc_bruta.upper() in ["", "NONE"]:
+            desc_bruta = "Revisar"
+
+        categoria = clasificar_categoria(desc_bruta)
+
         movimientos.append({
             "Fecha": fecha,
-            "Descripción": desc,
+            "Descripción": desc_bruta,
             "Monto": monto,
             "Categoría": categoria
         })
+
     return pd.DataFrame(movimientos)
+
 
 def obtener_periodo_facturacion_custom(fecha):
     fecha = pd.to_datetime(fecha)
