@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 st.set_page_config(page_title="Cartola Santander", layout="wide")
-st.title("🧾 Clasificador de Gastos Cartola Santander")
+st.title("📜 Clasificador de Gastos Cartola Santander")
 
 # Clasificador personalizado
 def clasificar_categoria(descripcion):
@@ -47,11 +47,11 @@ def clasificar_categoria(descripcion):
     elif "SEGURO" in descripcion or "SANTANDER COMPRAS P.A.T" in descripcion:
         return "🛡️ Seguro Auto"
     elif "CHATGPT" in descripcion:
-        return "🤖 Chat GPT"
+        return "🧐 Chat GPT"
     elif "MOVISTARHOGAR" in descripcion:
         return "📺 Internet + TV"
     elif "STA ISABEL" in descripcion or "SANTA ISABEL" in descripcion:
-        return "🛒 Supermercado"
+        return "💼 Supermercado"
     else:
         return "📦 Otro gasto"
 
@@ -79,16 +79,6 @@ def extraer_movimientos(texto):
         })
     return pd.DataFrame(movimientos)
 
-# Lógica de periodos (25 a 25)
-def obtener_periodo_facturacion_custom(fecha):
-    fecha = pd.to_datetime(fecha)
-    if fecha.day >= 25:
-        inicio = pd.Timestamp(fecha.year, fecha.month, 25)
-    else:
-        mes_anterior = fecha - pd.DateOffset(months=1)
-        inicio = pd.Timestamp(mes_anterior.year, mes_anterior.month, 25)
-    return inicio.strftime("%Y-%m")
-
 # Subida de archivo y clave
 uploaded_file = st.file_uploader("Sube tu cartola en PDF", type="pdf")
 password = st.text_input("Ingresa la clave del PDF", type="password")
@@ -101,8 +91,26 @@ if uploaded_file and password:
     df = extraer_movimientos(texto)
     df["Fecha"] = pd.to_datetime(df["Fecha"], format="%d/%m/%Y")
     df = df[~df["Descripción"].str.contains("(?i)banco|monto cancelado", na=False)]
-    df["Periodo"] = df["Fecha"].apply(obtener_periodo_facturacion_custom)
-    periodo_referencia = df["Periodo"].iloc[0]
+
+    # Periodo desde el nombre del archivo PDF
+    nombre_archivo_pdf = uploaded_file.name
+    match_fecha_archivo = re.search(r"(\d{4})(\d{2})(\d{2})", nombre_archivo_pdf)
+    if match_fecha_archivo:
+        anio = int(match_fecha_archivo.group(1))
+        mes = int(match_fecha_archivo.group(2))
+        dia = int(match_fecha_archivo.group(3))
+        fecha_referencia = pd.Timestamp(anio, mes, dia)
+        if fecha_referencia.day >= 25:
+            inicio = pd.Timestamp(fecha_referencia.year, fecha_referencia.month, 25)
+        else:
+            fecha_referencia -= pd.DateOffset(months=1)
+            inicio = pd.Timestamp(fecha_referencia.year, fecha_referencia.month, 25)
+        periodo_referencia = inicio.strftime("%Y-%m")
+    else:
+        st.error("⚠️ No se pudo extraer la fecha del nombre del archivo. Usa formato YYYYMMDD.")
+        st.stop()
+
+    df["Periodo"] = periodo_referencia
 
     os.makedirs("historico", exist_ok=True)
     nombre_archivo = f"historico/cartola_{periodo_referencia}.csv"
@@ -115,7 +123,6 @@ if uploaded_file and password:
     else:
         df.to_csv(nombre_archivo, index=False)
         st.success(f"✅ Cartola guardada como {nombre_archivo}")
-
 # Visualización histórica
 archivos = [f for f in os.listdir("historico") if f.endswith(".csv")]
 if not archivos:
