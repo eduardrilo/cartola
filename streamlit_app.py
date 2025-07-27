@@ -62,6 +62,7 @@ def clasificar_categoria(descripcion):
 
 # Extraer movimientos desde texto del PDF
 def extraer_movimientos(texto):
+    
     movimientos = []
     lineas = texto.splitlines()[8:]
 
@@ -92,6 +93,22 @@ if uploaded_file and password:
     df = extraer_movimientos(texto)
     df["Fecha"] = pd.to_datetime(df["Fecha"], format="%d/%m/%Y")
     df = df[~df["Descripción"].str.contains("(?i)banco|monto cancelado", na=False)]
+    
+    # Tomamos la fecha del primer movimiento como referencia
+    fecha_referencia = df["Fecha"].min()
+    anio_mes = fecha_referencia.strftime("%Y-%m")  # Ej: 2024-03
+    nombre_archivo = f"historico/cartola_{anio_mes}.csv"
+    
+    # Creamos carpeta si no existe
+    os.makedirs("historico", exist_ok=True)
+    
+    # Guardamos si no existe ya ese archivo
+    if not os.path.exists(nombre_archivo):
+        df.to_csv(nombre_archivo, index=False)
+        st.success(f"✅ Cartola guardada como {nombre_archivo}")
+    else:
+        st.info(f"ℹ️ Ya existe un archivo para el mes {anio_mes}, no se volvió a guardar.")
+
 
     if df.empty:
         st.warning("No se encontraron movimientos.")
