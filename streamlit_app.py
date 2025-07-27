@@ -1,6 +1,5 @@
 import os
 import re
-import glob
 import pdfplumber
 import pandas as pd
 import streamlit as st
@@ -12,145 +11,155 @@ load_dotenv()
 st.set_page_config(page_title="Cartola Santander", layout="wide")
 st.title("🧾 Clasificador de Gastos Cartola Santander")
 
-
-# ----------------------------------
-# FUNCIONES INTERNAS
-# ----------------------------------
-
-def clasificar_gasto(descripcion):
-    descripcion = descripcion.lower()
-    if any(palabra in descripcion for palabra in ["uber", "cabify", "taxi"]):
-        return "Transporte"
-    elif any(palabra in descripcion for palabra in ["jumbo", "lider", "unimarc", "super", "mercado"]):
-        return "Supermercado"
-    elif any(palabra in descripcion for palabra in ["netflix", "spotify", "youtube", "hbo"]):
-        return "Suscripciones"
-    elif any(palabra in descripcion for palabra in ["farmacia", "cruz verde", "ahumada"]):
-        return "Salud"
-    elif any(palabra in descripcion for palabra in ["rest", "café", "bar", "burg", "kfc", "pizza", "mcdon", "domino"]):
-        return "Comida"
-    elif any(palabra in descripcion for palabra in ["abono", "transferencia", "pago recib"]):
-        return "Abono"
+# === FUNCIONES ===
+def clasificar_categoria(descripcion):
+    descripcion = str(descripcion).upper()
+    if "ENEL" in descripcion:
+        return "💡 Luz"
+    if "NOTA DE CREDITO" in descripcion:
+        return "🏱 Devoluciones"
+    elif "BARBER" in descripcion:
+        return "✂️ Barbería"
+    elif "ENTELPCS" in descripcion or "ENTEL PCS" in descripcion:
+        return "📱 Plan Celular"
+    elif "AGUASCORDILLERA" in descripcion or "AGUAS CORDILLERA" in descripcion:
+        return "🚿 Agua"
+    elif any(x in descripcion for x in ["ARAMCO", "COPEC", "PETROBRAS", "SHELL"]):
+        return "⛽ Gasolina"
+    elif any(x in descripcion for x in ["GUESS", "PARIS", "FALABELLA", "HYM", "EASTON"]):
+        return "👖 Ropa"
+    elif any(x in descripcion for x in ["SABA", "ESTACIONAMIENTO"]):
+        return "🚹 Estacionamiento"
+    elif any(x in descripcion for x in ["VESPUCIONORTE", "COSTANERA", "AUTOPASE", "VESPUCIOSUR", "CONCESIO"]):
+        return "🛣️ Peaje / Autopista"
+    elif any(x in descripcion for x in ["KRYTERION"]):
+        return "🎓 Educacion"
+    elif any(x in descripcion for x in ["UBER", "DIDI", "BIPQR"]):
+        return "🚗 Transporte"
+    elif any(x in descripcion for x in ["BRANDO", "CASAIDEAS"]):
+        return "🏠 Hogar"
+    elif any(x in descripcion for x in ["FARMACIA", "CRUZ VERDE", "SALCO", "PROCEDIMIENTOS", "CONTINGENCIA CPA"]):
+        return "💊 Salud"
+    elif any(x in descripcion for x in ["TUU","BDK", "GASTRONOMICA", "RESTAURANTE", "CAFE", "MCDONALD", "STARBUCKS"]):
+        return "🍽️ Comida"
+    elif "VETERINARIA" in descripcion or "PET" in descripcion:
+        return "🐾 Veterinaria"
+    elif "SEGURO" in descripcion or "SANTANDER COMPRAS P.A.T" in descripcion:
+        return "🛡️ Seguro Auto"
+    elif "CHATGPT" in descripcion:
+        return "🤖 Chat GPT"
+    elif "MOVISTARHOGAR" in descripcion:
+        return "📺 Internet + TV"
+    elif "STA ISABEL" in descripcion or "SANTA ISABEL" in descripcion:
+        return "🛒 Supermercado"
     else:
-        return "Otros"
+        return "📦 Otro gasto"
 
-def obtener_periodo_facturacion_custom(fecha):
-    fecha = pd.to_datetime(fecha)
-    if fecha.day >= 25:
-        inicio = pd.Timestamp(fecha.year, fecha.month, 25)
-    else:
-        mes_anterior = fecha - pd.DateOffset(months=1)
-        inicio = pd.Timestamp(mes_anterior.year, mes_anterior.month, 25)
-    return inicio.strftime("%Y-%m")
+def extraer_movimientos(texto):
+    movimientos = []
+    lineas = texto.splitlines()[8:]
+    for linea in lineas:
+        if not "$" in linea:
+            continue
+        match = re.search(r"(\d{2}/\d{2}/\d{4}).*?\$[\s-]*([\d.]+)", linea)
+        if not match:
+            continue
+        fecha = match.group(1)
+        monto = float(match.group(2).replace(".", ""))
+        if "NOTA DE CREDITO" in linea.upper():
+            monto *= -1
+        desc = re.sub(r".*?\d{4} ", "", linea).split("$")[0].strip()
+        categoria = clasificar_categoria(desc)
+        movimientos.append({
+            "Fecha": fecha,
+            "Descripción": desc,
+            "Monto": monto,
+            "Categoría": categoria
+        })
+    return pd.DataFrame(movimientos)
 
-# ----------------------------------
-# CARGA AUTOMÁTICA DESDE PDF EN REPO
-# ----------------------------------
+# === INTERFAZ ===
+uploaded_file = st.file_uploader("Sube tu cartola en PDF", type="pdf")
+password = st.text_input("Ingresa la clave del PDF", type="password")
 
-os.makedirs("historico", exist_ok=True)
-clave_pdf = st.sidebar.text_input("🔐 Clave para desbloquear PDFs del repo", type="password")
+if uploaded_file and password:
+    with pdfplumber.open(uploaded_file, password=password) as pdf:
+        texto = "\n".join([p.extract_text() for p in pdf.pages if p.extract_text()])
+    df = extraer_movimientos(texto)
+    df["Fecha"] = pd.to_datetime(df["Fecha"], format="%d/%m/%Y")
+    df = df[~df["Descripción"].str.contains("(?i)banco|monto cancelado", na=False)]
+    fecha_referencia = df["Fecha"].min()
+    anio_mes = fecha_referencia.strftime("%Y-%m")
+    os.makedirs("historico", exist_ok=True)
+    nombre_archivo = f"historico/cartola_{anio_mes}.csv"
+    if not os.path.exists(nombre_archivo):
+        df.to_csv(nombre_archivo, index=False)
+        st.success(f"✅ Cartola guardada como {nombre_archivo}")
 
-pdfs_en_repo = [f for f in os.listdir() if f.endswith(".pdf")]
-csvs_procesados = set(f.replace(".csv", "") for f in os.listdir("historico"))
-
-for nombre_pdf in pdfs_en_repo:
-    nombre_base = nombre_pdf.replace(".pdf", "")
-    if nombre_base in csvs_procesados:
-        continue
-    try:
-        with pdfplumber.open(nombre_pdf, password=clave_pdf) as pdf:
-            data = []
-            for pagina in pdf.pages:
-                tabla = pagina.extract_table()
-                if tabla:
-                    for fila in tabla[1:]:
-                        if len(fila) >= 4:
-                            fecha, descripcion, canal, monto = fila[:4]
-                            data.append([fecha.strip(), descripcion.strip(), canal.strip(), monto.strip()])
-        df = pd.DataFrame(data, columns=["Fecha", "Descripción", "Canal", "Monto"])
-        df["Monto"] = df["Monto"].str.replace(".", "", regex=False).str.replace(",", "", regex=False).astype(int)
-        df["Categoría"] = df["Descripción"].apply(clasificar_gasto)
-        df.to_csv(f"historico/{nombre_base}.csv", index=False)
-        st.success(f"✅ Procesado y guardado: {nombre_base}.csv")
-    except Exception as e:
-        st.warning(f"⚠️ No se pudo procesar {nombre_pdf}: {e}")
-
-# ----------------------------------
-# CARGA MANUAL PDF
-# ----------------------------------
-
-st.markdown("📂 **Sube tu cartola en PDF (opcional)**")
-archivo_subido = st.file_uploader("Arrastra aquí tu cartola", type=["pdf"])
-clave_manual = st.text_input("🔐 Clave para PDF subido", type="password", key="clave_manual")
-
-if archivo_subido and clave_manual:
-    nombre_archivo = archivo_subido.name.replace(".pdf", "")
-    if f"{nombre_archivo}.csv" not in os.listdir("historico"):
-        try:
-            with pdfplumber.open(archivo_subido, password=clave_manual) as pdf:
-                data = []
-                for pagina in pdf.pages:
-                    tabla = pagina.extract_table()
-                    if tabla:
-                        for fila in tabla[1:]:
-                            if len(fila) >= 4:
-                                fecha, descripcion, canal, monto = fila[:4]
-                                data.append([fecha.strip(), descripcion.strip(), canal.strip(), monto.strip()])
-            df = pd.DataFrame(data, columns=["Fecha", "Descripción", "Canal", "Monto"])
-            df["Monto"] = df["Monto"].str.replace(".", "", regex=False).str.replace(",", "", regex=False).astype(int)
-            df["Categoría"] = df["Descripción"].apply(clasificar_gasto)
-            df.to_csv(f"historico/{nombre_archivo}.csv", index=False)
-            st.success(f"✅ Cartola subida: {nombre_archivo}.csv")
-        except Exception as e:
-            st.error(f"❌ Error al procesar el PDF: {e}")
-    else:
-        st.info("ℹ️ Este archivo ya fue procesado anteriormente.")
-
-# ----------------------------------
-# CARGAR DATOS HISTÓRICOS Y VISUALIZACIÓN
-# ----------------------------------
-
+# === MOSTRAR HISTORIAL ===
 archivos = [f for f in os.listdir("historico") if f.endswith(".csv")]
 if not archivos:
-    st.warning("⚠️ No hay cartolas disponibles.")
+    st.warning("⚠️ No hay cartolas cargadas.")
 else:
     dfs = [pd.read_csv(f"historico/{f}") for f in archivos]
     df_historico = pd.concat(dfs, ignore_index=True)
-    df_historico = df_historico.drop_duplicates(subset=["Fecha", "Descripción", "Monto"])
     df_historico["Fecha"] = pd.to_datetime(df_historico["Fecha"])
-    df_historico["Periodo"] = df_historico["Fecha"].apply(obtener_periodo_facturacion_custom)
     df_historico["Monto_formateado"] = df_historico["Monto"].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+    df_historico["Cartola"] = df_historico["Fecha"].dt.strftime("%Y-%m")
 
-    periodos = sorted(df_historico["Periodo"].unique(), reverse=True)
+    cartolas = sorted(df_historico["Cartola"].unique(), reverse=True)
     categorias = sorted(df_historico["Categoría"].unique())
 
     col1, col2 = st.columns(2)
-    filtro_periodo = col1.selectbox("🗓️ Filtrar por cartola (25 a 25):", ["Todos"] + periodos)
+    filtro_mes = col1.selectbox("🗓️ Filtrar por cartola (mes):", ["Todas"] + cartolas)
     filtro_cat = col2.multiselect("🔍 Categorías:", categorias, default=categorias)
 
     df_vista = df_historico.copy()
-    if filtro_periodo != "Todos":
-        df_vista = df_vista[df_vista["Periodo"] == filtro_periodo]
+    if filtro_mes != "Todas":
+        df_vista = df_vista[df_vista["Cartola"] == filtro_mes]
     df_vista = df_vista[df_vista["Categoría"].isin(filtro_cat)]
     df_vista = df_vista.sort_values("Fecha", ascending=False)
 
     st.dataframe(df_vista[["Fecha", "Descripción", "Monto_formateado", "Categoría"]], use_container_width=True)
 
-    # Métricas principales
-    gastos = df_vista[~df_vista["Categoría"].isin(["Abono"])]["Monto"].sum()
-    abonos = df_vista[df_vista["Categoría"] == "Abono"]["Monto"].sum()
-    neto = gastos - abonos
+    # KPIs
+    gasto_total = df_vista[df_vista["Monto"] > 0]["Monto"].sum()
+    abonos = df_vista[df_vista["Monto"] < 0]["Monto"].sum()
+    st.metric("💸 Gasto total", f"$ {gasto_total:,.0f}")
+    st.metric("💰 Abonos", f"$ {abonos:,.0f}")
+    st.metric("📄 Total de movimientos", len(df_vista))
 
-    st.markdown("### 💵 Resumen financiero")
-    col3, col4, col5 = st.columns(3)
-    col3.metric("Gastos", f"$ {gastos:,.0f}".replace(",", "."))
-    col4.metric("Abonos", f"$ {abonos:,.0f}".replace(",", "."))
-    col5.metric("Gasto Total Neto", f"$ {neto:,.0f}".replace(",", "."))
+    # GRÁFICOS
+    df_agrupado = df_vista[df_vista["Monto"] > 0].groupby("Categoría", as_index=False)["Monto"].sum()
 
-    # Gráfico: evolución neta por cartola
-    st.markdown("### 📊 Evolución de Gasto Total Neto por Cartola")
-    resumen = df_historico.groupby("Periodo").apply(
-        lambda x: x[~x["Categoría"].isin(["Abono"])]["Monto"].sum()
-                  - x[x["Categoría"] == "Abono"]["Monto"].sum()
-    ).reset_index(name="Gasto Total Neto")
-    st.bar_chart(resumen.set_index("Periodo"))
+    st.subheader("📊 Distribución de gasto por categoría")
+    if not df_agrupado.empty:
+        chart = alt.Chart(df_agrupado).mark_bar().encode(
+            x=alt.X("Categoría:N", sort='-y'),
+            y=alt.Y("Monto:Q", scale=alt.Scale(domain=[0, df_agrupado["Monto"].max() * 1.1])),
+            color="Categoría:N",
+            tooltip=[
+                alt.Tooltip("Categoría", title="Categoría"),
+                alt.Tooltip("Monto", title="Monto", format=",.0f")
+            ]
+        ).properties(
+            width=600,
+            height=400
+        )
+        st.altair_chart(chart, use_container_width=True)
+
+    st.subheader("🥧 Gasto por categoría (torta 3D)")
+    fig_pie = px.pie(
+        df_agrupado,
+        names="Categoría",
+        values="Monto",
+        title="🥛 Distribución por categoría",
+        hole=0.4
+    )
+    fig_pie.update_traces(
+        textinfo='percent+label',
+        pull=[0.05]*len(df_agrupado),
+        hovertemplate="%{label}<br>$ %{value:,.0f}<extra></extra>"
+    )
+    fig_pie.update_layout(showlegend=True, height=500)
+    st.plotly_chart(fig_pie, use_container_width=True)
