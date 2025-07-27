@@ -81,11 +81,28 @@ def extraer_movimientos(texto):
 def obtener_periodo_facturacion_custom(fecha):
     fecha = pd.to_datetime(fecha)
     if fecha.day >= 25:
-        inicio = pd.Timestamp(year=fecha.year, month=fecha.month, day=25)
+        inicio = pd.Timestamp(fecha.year, fecha.month, 25)
     else:
         mes_anterior = fecha - pd.DateOffset(months=1)
-        inicio = pd.Timestamp(year=mes_anterior.year, month=mes_anterior.month, day=25)
-    return inicio.strftime("%Y-%m-%d")
+        inicio = pd.Timestamp(mes_anterior.year, mes_anterior.month, 25)
+
+    return inicio.strftime("%Y-%m")
+
+# Guardar archivo si no está duplicado
+os.makedirs("historico", exist_ok=True)
+nombre_archivo = f"historico/cartola_{periodo_referencia}.csv"
+
+if os.path.exists(nombre_archivo):
+    df_existente = pd.read_csv(nombre_archivo, parse_dates=["Fecha"])
+    df = pd.concat([df_existente, df], ignore_index=True).drop_duplicates(subset=["Fecha", "Descripción", "Monto"])
+    df.to_csv(nombre_archivo, index=False)
+    st.info(f"ℹ️ Cartola {periodo_referencia} ya existía. Se actualizaron los datos sin duplicados.")
+else:
+    df.to_csv(nombre_archivo, index=False)
+    st.success(f"✅ Cartola guardada como {nombre_archivo}")
+
+uploaded_file = st.file_uploader("Sube tu cartola en PDF", type="pdf")
+password = st.text_input("Ingresa la clave del PDF", type="password")
 
 uploaded_file = st.file_uploader("Sube tu cartola en PDF", type="pdf")
 password = st.text_input("Ingresa la clave del PDF", type="password")
@@ -93,16 +110,26 @@ password = st.text_input("Ingresa la clave del PDF", type="password")
 if uploaded_file and password:
     with pdfplumber.open(uploaded_file, password=password) as pdf:
         texto = "\n".join([p.extract_text() for p in pdf.pages if p.extract_text()])
+
     df = extraer_movimientos(texto)
     df["Fecha"] = pd.to_datetime(df["Fecha"], format="%d/%m/%Y")
     df = df[~df["Descripción"].str.contains("(?i)banco|monto cancelado", na=False)]
     df["Periodo"] = df["Fecha"].apply(obtener_periodo_facturacion_custom)
     periodo_referencia = df["Periodo"].iloc[0]
+
+    # Guardar archivo si no está duplicado
     os.makedirs("historico", exist_ok=True)
     nombre_archivo = f"historico/cartola_{periodo_referencia}.csv"
-    if not os.path.exists(nombre_archivo):
+
+    if os.path.exists(nombre_archivo):
+        df_existente = pd.read_csv(nombre_archivo, parse_dates=["Fecha"])
+        df = pd.concat([df_existente, df], ignore_index=True).drop_duplicates(subset=["Fecha", "Descripción", "Monto"])
+        df.to_csv(nombre_archivo, index=False)
+        st.info(f"ℹ️ Cartola {periodo_referencia} ya existía. Se actualizaron los datos sin duplicados.")
+    else:
         df.to_csv(nombre_archivo, index=False)
         st.success(f"✅ Cartola guardada como {nombre_archivo}")
+
 
 archivos = [f for f in os.listdir("historico") if f.endswith(".csv")]
 if not archivos:
