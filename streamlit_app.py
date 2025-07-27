@@ -122,17 +122,25 @@ if uploaded_file and password:
     df["Fecha"] = pd.to_datetime(df["Fecha"], format="%d/%m/%Y")
     df = df[~df["Descripción"].str.contains("(?i)banco|monto cancelado", na=False)]
 
+        # Asegúrate de que la columna Fecha esté en formato datetime
+    df["Fecha"] = pd.to_datetime(df["Fecha"], errors='coerce')
+
+    # Obtener fecha más reciente de movimientos para nombrar la cartola
     fecha_maxima = df["Fecha"].max()
     periodo_referencia = obtener_periodo_facturacion_custom(fecha_maxima)
+
+    # Añadir periodo como columna extra (opcional pero útil)
     df["Periodo"] = periodo_referencia
 
     os.makedirs("historico", exist_ok=True)
     nombre_archivo = f"historico/cartola_{periodo_referencia}.csv"
+
     if not os.path.exists(nombre_archivo):
         df.to_csv(nombre_archivo, index=False)
         st.success(f"✅ Cartola guardada como {nombre_archivo}")
     else:
         st.info(f"ℹ️ Cartola ya existe para el periodo {periodo_referencia}. No se guardó nuevamente.")
+
 
 archivos = [f for f in os.listdir("historico") if f.endswith(".csv")]
 if not archivos:
