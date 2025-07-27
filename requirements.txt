@@ -1,0 +1,6 @@
+pandas
+streamlit
+altair
+plotly
+pdfplumber
+python-dotenv
