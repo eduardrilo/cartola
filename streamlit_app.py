@@ -36,11 +36,11 @@ def clasificar_categoria(descripcion):
         return "🚿 Agua"
     elif any(x in descripcion for x in ["ARAMCO", "COPEC", "PETROBRAS", "SHELL"]):
         return "⛽ Gasolina"
-    elif any(x in descripcion for x in ["GUESS", "PARIS", "FALABELLA", "HYM", "EASTON"]):
+    elif any(x in descripcion for x in ["GUESS", "PARIS", "FALABELLA", "HM", "EASTON"]):
         return "👖 Ropa"
-    elif any(x in descripcion for x in ["SABA", "ESTACIONAMIENTO"]):
+    elif any(x in descripcion for x in ["SABA", "ESTACIONAMIENTO", "PARKING"]):
         return "🚩 Estacionamiento"
-    elif any(x in descripcion for x in ["VESPUCIONORTE", "COSTANERA", "AUTOPASE", "VESPUCIOSUR", "CONCESIO"]):
+    elif any(x in descripcion for x in ["VESPUCIONORTE", "COSTANERA", "AUTOPASE", "VESPUCIOSUR", "CONCESIO", "AUTOPISTA"]):
         return "🚧 Peaje / Autopista"
     elif any(x in descripcion for x in ["KRYTERION"]):
         return "🎓 Educacion"
@@ -50,7 +50,7 @@ def clasificar_categoria(descripcion):
         return "🏠 Hogar"
     elif any(x in descripcion for x in ["FARMACIA", "CRUZ VERDE", "SALCO", "PROCEDIMIENTOS", "CONTINGENCIA CPA"]):
         return "💊 Salud"
-    elif any(x in descripcion for x in ["TUU","BDK", "GASTRONOMICA", "RESTAURANTE", "CAFE", "MCDONALD", "STARBUCKS"]):
+    elif any(x in descripcion for x in ["TUU","BDK", "GASTRONOMICA", "RESTAURANTE", "CAFE", "MCDONALD", "STARBUCKS", "MELT"]):
         return "🍽️ Comida"
     elif "VETERINARIA" in descripcion or "PET" in descripcion:
         return "🐾 Veterinaria"
@@ -60,7 +60,7 @@ def clasificar_categoria(descripcion):
         return "🤖 Chat GPT"
     elif "MOVISTARHOGAR" in descripcion:
         return "📺 Internet + TV"
-    elif "STA ISABEL" in descripcion or "SANTA ISABEL" in descripcion:
+    elif any(x in descripcion for x in ["STA ISABEL","PIWEN", "LIDER", "JUMBO", "TOTTUS"]):
         return "🛒 Supermercado"
     else:
         return "📦 Otro gasto"
