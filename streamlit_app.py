@@ -90,12 +90,8 @@ def extraer_movimientos(texto):
 
 def obtener_periodo_facturacion_custom(fecha):
     fecha = pd.to_datetime(fecha)
-    if fecha.day >= 25:
-        inicio = pd.Timestamp(year=fecha.year, month=fecha.month, day=25)
-    else:
-        mes_anterior = fecha - pd.DateOffset(months=1)
-        inicio = pd.Timestamp(year=mes_anterior.year, month=mes_anterior.month, day=25)
-    return inicio.strftime("%Y-%m-%d")
+    periodo = pd.Timestamp(year=fecha.year, month=fecha.month, day=25)
+    return periodo.strftime("%Y-%m-%d")
 
 uploaded_file = st.file_uploader("Sube tu cartola en PDF", type="pdf")
 password = st.text_input("Ingresa la clave del PDF", type="password")
