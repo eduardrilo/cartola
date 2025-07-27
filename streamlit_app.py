@@ -1,4 +1,3 @@
-
 import os
 import re
 import pdfplumber
@@ -12,6 +11,7 @@ load_dotenv()
 st.set_page_config(page_title="Cartola Santander", layout="wide")
 st.title("🧾 Clasificador de Gastos Cartola Santander")
 
+# Clasificador personalizado
 def clasificar_categoria(descripcion):
     descripcion = str(descripcion).upper()
     if "ENEL" in descripcion:
@@ -40,7 +40,7 @@ def clasificar_categoria(descripcion):
         return "🏠 Hogar"
     elif any(x in descripcion for x in ["FARMACIA", "CRUZ VERDE", "SALCO", "PROCEDIMIENTOS", "CONTINGENCIA CPA"]):
         return "💊 Salud"
-    elif any(x in descripcion for x in ["TUU","BDK", "GASTRONOMICA", "RESTAURANTE", "CAFE", "MCDONALD", "STARBUCKS"]):
+    elif any(x in descripcion for x in ["TUU", "BDK", "GASTRONOMICA", "RESTAURANTE", "CAFE", "MCDONALD", "STARBUCKS"]):
         return "🍽️ Comida"
     elif "VETERINARIA" in descripcion or "PET" in descripcion:
         return "🐾 Veterinaria"
@@ -55,11 +55,12 @@ def clasificar_categoria(descripcion):
     else:
         return "📦 Otro gasto"
 
+# Extracción desde texto del PDF
 def extraer_movimientos(texto):
     movimientos = []
     lineas = texto.splitlines()[8:]
     for linea in lineas:
-        if not "$" in linea:
+        if "$" not in linea:
             continue
         match = re.search(r"(\d{2}/\d{2}/\d{4}).*?\$[\s-]*([\d.]+)", linea)
         if not match:
@@ -78,6 +79,7 @@ def extraer_movimientos(texto):
         })
     return pd.DataFrame(movimientos)
 
+# Lógica de periodos (25 a 25)
 def obtener_periodo_facturacion_custom(fecha):
     fecha = pd.to_datetime(fecha)
     if fecha.day >= 25:
@@ -85,31 +87,16 @@ def obtener_periodo_facturacion_custom(fecha):
     else:
         mes_anterior = fecha - pd.DateOffset(months=1)
         inicio = pd.Timestamp(mes_anterior.year, mes_anterior.month, 25)
-
     return inicio.strftime("%Y-%m")
 
-# Guardar archivo si no está duplicado
-os.makedirs("historico", exist_ok=True)
-nombre_archivo = f"historico/cartola_{periodo_referencia}.csv"
-
-if os.path.exists(nombre_archivo):
-    df_existente = pd.read_csv(nombre_archivo, parse_dates=["Fecha"])
-    df = pd.concat([df_existente, df], ignore_index=True).drop_duplicates(subset=["Fecha", "Descripción", "Monto"])
-    df.to_csv(nombre_archivo, index=False)
-    st.info(f"ℹ️ Cartola {periodo_referencia} ya existía. Se actualizaron los datos sin duplicados.")
-else:
-    df.to_csv(nombre_archivo, index=False)
-    st.success(f"✅ Cartola guardada como {nombre_archivo}")
-
+# Subida de archivo y clave
 uploaded_file = st.file_uploader("Sube tu cartola en PDF", type="pdf")
 password = st.text_input("Ingresa la clave del PDF", type="password")
 
-uploaded_file = st.file_uploader("Sube tu cartola en PDF", type="pdf")
-password = st.text_input("Ingresa la clave del PDF", type="password")
-
+# Procesamiento si archivo cargado
 if uploaded_file and password:
     with pdfplumber.open(uploaded_file, password=password) as pdf:
-        texto = "\n".join([p.extract_text() for p in pdf.pages if p.extract_text()])
+        texto = "\n".join([pagina.extract_text() for pagina in pdf.pages if pagina.extract_text()])
 
     df = extraer_movimientos(texto)
     df["Fecha"] = pd.to_datetime(df["Fecha"], format="%d/%m/%Y")
@@ -117,7 +104,6 @@ if uploaded_file and password:
     df["Periodo"] = df["Fecha"].apply(obtener_periodo_facturacion_custom)
     periodo_referencia = df["Periodo"].iloc[0]
 
-    # Guardar archivo si no está duplicado
     os.makedirs("historico", exist_ok=True)
     nombre_archivo = f"historico/cartola_{periodo_referencia}.csv"
 
@@ -130,7 +116,7 @@ if uploaded_file and password:
         df.to_csv(nombre_archivo, index=False)
         st.success(f"✅ Cartola guardada como {nombre_archivo}")
 
-
+# Visualización histórica
 archivos = [f for f in os.listdir("historico") if f.endswith(".csv")]
 if not archivos:
     st.warning("⚠️ No hay cartolas cargadas.")
@@ -174,10 +160,7 @@ else:
             x=alt.X("Categoría:N", sort='-y'),
             y=alt.Y("Monto:Q", scale=alt.Scale(domain=[0, df_agrupado["Monto"].max() * 1.1])),
             color="Categoría:N",
-            tooltip=[
-                alt.Tooltip("Categoría", title="Categoría"),
-                alt.Tooltip("Monto", title="Monto", format=",.0f")
-            ]
+            tooltip=[alt.Tooltip("Categoría"), alt.Tooltip("Monto", format=",.0f")]
         ).properties(width=600, height=400)
         st.altair_chart(chart, use_container_width=True)
 
@@ -208,7 +191,7 @@ else:
         x=alt.X("Periodo:N", sort=None),
         y=alt.Y("Gasto Neto:Q", title="Gasto Neto"),
         tooltip=[
-            alt.Tooltip("Periodo", title="Periodo"),
+            alt.Tooltip("Periodo"),
             alt.Tooltip("Gasto Neto", format=",.0f")
         ]
     ).properties(width=800, height=400)
