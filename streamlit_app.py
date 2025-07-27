@@ -1,5 +1,3 @@
-
-
 import os
 import re
 import pdfplumber
@@ -13,6 +11,7 @@ load_dotenv()
 st.set_page_config(page_title="Cartola Santander", layout="wide")
 st.title("🧾 Clasificador de Gastos Cartola Santander")
 
+# === FUNCIONES ===
 def clasificar_categoria(descripcion):
     descripcion = str(descripcion).upper()
     if "ENEL" in descripcion:
@@ -79,15 +78,15 @@ def extraer_movimientos(texto):
         })
     return pd.DataFrame(movimientos)
 
-def obtener_periodo_facturacion_custom(fecha):
+def obtener_periodo_facturacion(fecha):
     fecha = pd.to_datetime(fecha)
-    if fecha.day >= 25:
-        inicio = pd.Timestamp(year=fecha.year, month=fecha.month, day=25)
+    if fecha.day >= 26:
+        return f"{fecha.year}-{fecha.month:02d}"
     else:
         mes_anterior = fecha - pd.DateOffset(months=1)
-        inicio = pd.Timestamp(year=mes_anterior.year, month=mes_anterior.month, day=25)
-    return inicio.strftime("%Y-%m-%d")
+        return f"{mes_anterior.year}-{mes_anterior.month:02d}"
 
+# === INTERFAZ ===
 uploaded_file = st.file_uploader("Sube tu cartola en PDF", type="pdf")
 password = st.text_input("Ingresa la clave del PDF", type="password")
 
@@ -97,7 +96,7 @@ if uploaded_file and password:
     df = extraer_movimientos(texto)
     df["Fecha"] = pd.to_datetime(df["Fecha"], format="%d/%m/%Y")
     df = df[~df["Descripción"].str.contains("(?i)banco|monto cancelado", na=False)]
-    df["Periodo"] = df["Fecha"].apply(obtener_periodo_facturacion_custom)
+    df["Periodo"] = df["Fecha"].apply(obtener_periodo_facturacion)
     periodo_referencia = df["Periodo"].iloc[0]
     os.makedirs("historico", exist_ok=True)
     nombre_archivo = f"historico/cartola_{periodo_referencia}.csv"
@@ -105,6 +104,7 @@ if uploaded_file and password:
         df.to_csv(nombre_archivo, index=False)
         st.success(f"✅ Cartola guardada como {nombre_archivo}")
 
+# === MOSTRAR HISTORIAL ===
 archivos = [f for f in os.listdir("historico") if f.endswith(".csv")]
 if not archivos:
     st.warning("⚠️ No hay cartolas cargadas.")
@@ -113,14 +113,14 @@ else:
     df_historico = pd.concat(dfs, ignore_index=True)
     df_historico["Fecha"] = pd.to_datetime(df_historico["Fecha"])
     df_historico["Monto_formateado"] = df_historico["Monto"].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-    df_historico["Periodo"] = df_historico["Fecha"].apply(obtener_periodo_facturacion_custom)
+    df_historico["Periodo"] = df_historico["Fecha"].apply(obtener_periodo_facturacion)
 
     periodos = sorted(df_historico["Periodo"].unique(), reverse=True)
     categorias = sorted(df_historico["Categoría"].unique())
 
     col1, col2 = st.columns(2)
     default_periodo = periodos[0] if periodos else "Todos"
-    filtro_periodo = col1.selectbox("🗓️ Filtrar por cartola (25 a 25):", ["Todos"] + periodos, index=1 if "Todos" in periodos else 0)
+    filtro_periodo = col1.selectbox("🗓️ Filtrar por cartola (periodo de facturación):", ["Todos"] + periodos, index=1 if "Todos" in periodos else 0)
     filtro_cat = col2.multiselect("🔍 Categorías:", categorias, default=categorias)
 
     df_vista = df_historico.copy()
@@ -131,13 +131,10 @@ else:
 
     st.dataframe(df_vista[["Fecha", "Descripción", "Monto_formateado", "Categoría"]], use_container_width=True)
 
-    gastos = df_vista[df_vista["Monto"] > 0]["Monto"].sum()
+    gasto_total = df_vista[df_vista["Monto"] > 0]["Monto"].sum()
     abonos = df_vista[df_vista["Monto"] < 0]["Monto"].sum()
-    gasto_neto = gastos + abonos
-
-    st.metric("💸 Gastos", f"$ {gastos:,.0f}")
+    st.metric("💸 Gasto total", f"$ {gasto_total:,.0f}")
     st.metric("💰 Abonos", f"$ {abonos:,.0f}")
-    st.metric("📊 Gasto neto (real)", f"$ {gasto_neto:,.0f}")
     st.metric("📄 Total de movimientos", len(df_vista))
 
     df_agrupado = df_vista[df_vista["Monto"] > 0].groupby("Categoría", as_index=False)["Monto"].sum()
@@ -170,20 +167,3 @@ else:
     )
     fig_pie.update_layout(showlegend=True, height=500)
     st.plotly_chart(fig_pie, use_container_width=True)
-
-    st.subheader("📉 Seguimiento de Gasto Neto por Cartola (25 a 25)")
-    df_gasto_neto = df_historico.groupby("Periodo").agg(
-        Gastos=("Monto", lambda x: x[x > 0].sum()),
-        Abonos=("Monto", lambda x: x[x < 0].sum())
-    ).reset_index()
-    df_gasto_neto["Gasto Neto"] = df_gasto_neto["Gastos"] + df_gasto_neto["Abonos"]
-
-    grafico = alt.Chart(df_gasto_neto).mark_bar().encode(
-        x=alt.X("Periodo:N", sort=None),
-        y=alt.Y("Gasto Neto:Q", title="Gasto Neto"),
-        tooltip=[
-            alt.Tooltip("Periodo", title="Periodo"),
-            alt.Tooltip("Gasto Neto", format=",.0f")
-        ]
-    ).properties(width=800, height=400)
-    st.altair_chart(grafico, use_container_width=True)
