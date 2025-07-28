@@ -221,7 +221,15 @@ else:
     st.plotly_chart(fig_pie, use_container_width=True)
 
     # Crear nueva columna Año-Mes
+    # Asegúrate de que 'Fecha' esté en formato datetime
+    df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
+    
+    # Crear columna de mes (ej: '2025-07')
     df["Mes"] = df["Fecha"].dt.to_period("M").astype(str)
+    
+    # Agrupar gasto neto por mes
+    df_mensual = df.groupby("Mes")["Gasto Neto"].sum().reset_index()
+
     
     chart = alt.Chart(df_mensual).mark_bar(color="skyblue").encode(
         x=alt.X("Mes:O", title="Mes", sort=None),
