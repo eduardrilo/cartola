@@ -2,7 +2,6 @@ import os
 import re
 import pdfplumber
 import pandas as pd
-import matplotlib.pyplot as plt
 import streamlit as st
 import altair as alt
 from datetime import datetime
@@ -224,14 +223,13 @@ else:
     # Crear nueva columna Año-Mes
     df["Mes"] = df["Fecha"].dt.to_period("M").astype(str)
     
-    # Agrupar por mes y sumar el gasto neto
-    df_mensual = df.groupby("Mes")["Gasto Neto"].sum().reset_index()
-    plt.figure(figsize=(10,5))
-    plt.bar(df_mensual["Mes"], df_mensual["Gasto Neto"], color="skyblue")
-    plt.title("📊 Seguimiento de Gasto Neto Mensual")
-    plt.xlabel("Mes")
-    plt.ylabel("Gasto Neto")
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.grid(True, axis='y')
-    plt.show()
+    chart = alt.Chart(df_mensual).mark_bar(color="skyblue").encode(
+        x=alt.X("Mes:O", title="Mes", sort=None),
+        y=alt.Y("Gasto Neto:Q", title="Gasto Neto"),
+        tooltip=["Mes", "Gasto Neto"]
+    ).properties(
+        title="📊 Seguimiento de Gasto Neto Mensual"
+    )
+    
+    st.altair_chart(chart, use_container_width=True)
+
