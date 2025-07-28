@@ -122,6 +122,7 @@ if uploaded_file and password:
     df = extraer_movimientos(texto)
     df["Fecha"] = pd.to_datetime(df["Fecha"], format="%d/%m/%Y")
     df = df[~df["Descripción"].str.contains("(?i)banco|monto cancelado", na=False)]
+    df = df[~df["Descripción"].str.contains("Revisar", case=False, na=False)]
 
         # Asegúrate de que la columna Fecha esté en formato datetime
     df["Fecha"] = pd.to_datetime(df["Fecha"], errors='coerce')
