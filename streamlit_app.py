@@ -222,15 +222,15 @@ else:
 
     # Crear nueva columna Año-Mes
     # Asegúrate de que 'Fecha' esté en formato datetime
+    # Crear nueva columna Año-Mes
     df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
-    
-    # Crear columna de mes (ej: '2025-07')
     df["Mes"] = df["Fecha"].dt.to_period("M").astype(str)
     
-    # Agrupar gasto neto por mes
-    df_mensual = df.groupby("Mes")["Gasto Neto"].sum().reset_index()
-
+    # Agrupar por mes y calcular gasto neto
+    df_mensual = df.groupby("Mes")["Monto"].sum().reset_index()
+    df_mensual.rename(columns={"Monto": "Gasto Neto"}, inplace=True)
     
+    # Crear gráfico con Altair
     chart = alt.Chart(df_mensual).mark_bar(color="skyblue").encode(
         x=alt.X("Mes:O", title="Mes", sort=None),
         y=alt.Y("Gasto Neto:Q", title="Gasto Neto"),
@@ -240,4 +240,5 @@ else:
     )
     
     st.altair_chart(chart, use_container_width=True)
+
 
