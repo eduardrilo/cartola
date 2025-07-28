@@ -220,25 +220,19 @@ else:
     fig_pie.update_layout(showlegend=True, height=500)
     st.plotly_chart(fig_pie, use_container_width=True)
 
-    # Crear nueva columna Año-Mes
-    # Asegúrate de que 'Fecha' esté en formato datetime
-    # Crear nueva columna Año-Mes
-    df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
-    df["Mes"] = df["Fecha"].dt.to_period("M").astype(str)
-    
-    # Agrupar por mes y calcular gasto neto
-    df_mensual = df.groupby("Mes")["Monto"].sum().reset_index()
-    df_mensual.rename(columns={"Monto": "Gasto Neto"}, inplace=True)
-    
-    # Crear gráfico con Altair
-    chart = alt.Chart(df_mensual).mark_bar(color="skyblue").encode(
-        x=alt.X("Mes:O", title="Mes", sort=None),
+    st.subheader("📉 Seguimiento de Gasto Neto por Cartola (25 a 25)")
+    df_gasto_neto = df_historico.groupby("Periodo").agg(
+        Gastos=("Monto", lambda x: x[x > 0].sum()),
+        Abonos=("Monto", lambda x: x[x < 0].sum())
+    ).reset_index()
+    df_gasto_neto["Gasto Neto"] = df_gasto_neto["Gastos"] + df_gasto_neto["Abonos"]
+
+    grafico = alt.Chart(df_gasto_neto).mark_bar().encode(
+        x=alt.X("Periodo:N", sort=None),
         y=alt.Y("Gasto Neto:Q", title="Gasto Neto"),
-        tooltip=["Mes", "Gasto Neto"]
-    ).properties(
-        title="📊 Seguimiento de Gasto Neto Mensual"
-    )
-    
-    st.altair_chart(chart, use_container_width=True)
-
-
+        tooltip=[
+            alt.Tooltip("Periodo", title="Periodo"),
+            alt.Tooltip("Gasto Neto", format=",.0f")
+        ]
+    ).properties(width=800, height=400)
+    st.altair_chart(grafico, use_container_width=True)
