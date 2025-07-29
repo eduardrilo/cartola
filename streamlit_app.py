@@ -37,9 +37,9 @@ def clasificar_categoria(descripcion):
         return "🚿 Agua"
     elif any(x in descripcion for x in ["ARAMCO", "COPEC", "PETROBRAS", "SHELL"]):
         return "⛽ Gasolina"
-    elif any(x in descripcion for x in ["GUESS", "PARIS", "FALABELLA", "HM", "H&M", "EASTON", "CK"]):
+    elif any(x in descripcion for x in ["GUESS", "PARIS", "FALABELLA", "HM", "H&M", "EASTON", "CK", "kakobuy"]):
         return "👖 Ropa"
-    elif any(x in descripcion for x in ["SABA", "ESTACIONAMIENTO", "PARKING"]):
+    elif any(x in descripcion for x in ["SABA", "ESTACIONAMIENTO", "PARKING", "ALTO"]):
         return "🚩 Estacionamiento"
     elif any(x in descripcion for x in ["VESPUCIONORTE", "COSTANERA", "AUTOPASE", "VESPUCIOSUR", "CONCESIO", "AUTOPISTA"]):
         return "🚧 Peaje / Autopista"
@@ -49,9 +49,13 @@ def clasificar_categoria(descripcion):
         return "🚗 Transporte"
     elif any(x in descripcion for x in ["BRANDO", "CASAIDEAS"]):
         return "🏠 Hogar"
-    elif any(x in descripcion for x in ["FARMACIA", "CRUZ VERDE", "SALCO", "PROCEDIMIENTOS", "CONTINGENCIA CPA", "CLINICA"]):
+    elif any(x in descripcion for x in ["FARMACIA", "CRUZ VERDE", "SALCO", "PROCEDIMIENTOS", "CONTINGENCIA CPA", "CLINICA", "CONSALUD"]):
         return "💊 Salud"
-    elif any(x in descripcion for x in ["TUU","BDK", "GASTRONOMICA", "RESTAURANTE", "CAFE", "MCDONALD", "STARBUCKS", "MELT", "ICE"]):
+    elif any(x in descripcion for x in ["PRODUCTOS", "MERCADOLIBRE", "TECNOPRO", "VISUALHEX"]):
+        return "🛍️ Compra Online"
+    elif any(x in descripcion for x in ["CHILEDRINK", "ANTICIPA", "CHEERS"]):
+        return "🍺 Alcohol"
+    elif any(x in descripcion for x in ["TUU","BDK", "GASTRONOMICA", "RESTAURANTE", "CAFE", "MCDONALD", "STARBUCKS", "MELT", "ICE", "BOAS"]):
         return "🍽️ Comida"
     elif "VETERINARIA" in descripcion or "PET" in descripcion:
         return "🐾 Veterinaria"
@@ -60,7 +64,7 @@ def clasificar_categoria(descripcion):
     elif "CHATGPT" in descripcion:
         return "🤖 Chat GPT"
     elif "METROGAS" in descripcion:
-        return "💨 GAS"
+        return "💨 Gas"
     elif "MOVISTARHOGAR" in descripcion:
         return "📺 Internet + TV"
     elif any(x in descripcion for x in ["STA ISABEL","PIWEN", "LIDER", "JUMBO", "TOTTUS"]):
