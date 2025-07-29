@@ -49,16 +49,18 @@ def clasificar_categoria(descripcion):
         return "🚗 Transporte"
     elif any(x in descripcion for x in ["BRANDO", "CASAIDEAS"]):
         return "🏠 Hogar"
-    elif any(x in descripcion for x in ["FARMACIA", "CRUZ VERDE", "SALCO", "PROCEDIMIENTOS", "CONTINGENCIA CPA", "CLINICA", "CONSALUD"]):
+    elif any(x in descripcion for x in ["FARMACIA", "CRUZ VERDE", "SALCO", "PROCEDIMIENTOS", "CONTINGENCIA CPA", "CLINICA", "CONSALUD", "MEGASALUD"]):
         return "💊 Salud"
     elif any(x in descripcion for x in ["PRODUCTOS", "MERCADOLIBRE", "TECNOPRO", "VISUALHEX"]):
         return "🛍️ Compra Online"
-    elif any(x in descripcion for x in ["CHILEDRINK", "ANTICIPA", "CHEERS"]):
+    elif any(x in descripcion for x in ["CHILEDRINK", "ANTICIPA", "CHEERS", "BARBANEGRA"]):
         return "🍺 Alcohol"
     elif any(x in descripcion for x in ["TUU","BDK", "GASTRONOMICA", "RESTAURANTE", "CAFE", "MCDONALD", "STARBUCKS", "MELT", "ICE", "BOAS"]):
         return "🍽️ Comida"
-    elif "VETERINARIA" in descripcion or "PET" in descripcion:
+    elif any(x in descripcion for x in ["VETERINARIA", "PET", "VETIVERY"]):
         return "🐾 Veterinaria"
+    elif any(x in descripcion for x in ["HAIRTREK"]):
+        return "🚫 Estafa"
     elif "SEGURO" in descripcion or "SANTANDER COMPRAS P.A.T" in descripcion:
         return "🛡️ Seguro Auto"
     elif "CHATGPT" in descripcion:
