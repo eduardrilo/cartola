@@ -37,7 +37,7 @@ def clasificar_categoria(descripcion):
         return "🚿 Agua"
     elif any(x in descripcion for x in ["ARAMCO", "COPEC", "PETROBRAS", "SHELL"]):
         return "⛽ Gasolina"
-    elif any(x in descripcion for x in ["GUESS", "PARIS", "FALABELLA", "HM", "H&M", "EASTON", "CK", "kakobuy"]):
+    elif any(x in descripcion for x in ["GUESS", "PARIS", "FALABELLA", "HM", "H&M", "EASTON", "CK", "*kakobuy"]):
         return "👖 Ropa"
     elif any(x in descripcion for x in ["SABA", "ESTACIONAMIENTO", "PARKING", "ALTO"]):
         return "🚩 Estacionamiento"
