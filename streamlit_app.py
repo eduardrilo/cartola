@@ -7,6 +7,7 @@ import altair as alt
 from datetime import datetime
 import plotly.express as px
 from dotenv import load_dotenv
+from io.drive_io import upload_csv_to_drive
 
 # ---------- Config ----------
 load_dotenv()
@@ -149,6 +150,15 @@ if uploaded_file and password:
         else:
             st.info(f"ℹ️ Cartola ya existe para el periodo {periodo_referencia}. No se guardó nuevamente.")
 
+        with st.expander("☁️ Exportar a Google Drive"):
+            drive_title = f"cartola_{periodo_referencia}.csv"  # nombre final en Drive
+            if st.button("Subir/actualizar CSV en carpeta LOOKER"):
+                try:
+                    file_id = upload_csv_to_drive(nombre_archivo, drive_title)
+                    st.success(f"☁️ Subido a Drive (LOOKER). File ID: {file_id}")
+                    st.caption("En Looker Studio selecciona este CSV desde Google Drive.")
+                except Exception as e:
+                    st.error(f"❌ Error subiendo a Drive: {e}")
     except Exception as e:
         st.error(f"❌ Error procesando la cartola: {e}")
 
@@ -237,3 +247,4 @@ else:
                  alt.Tooltip("Gasto Neto", format=",.0f")]
     ).properties(width=800, height=400)
     st.altair_chart(grafico, use_container_width=True)
+
