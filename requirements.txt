@@ -6,3 +6,6 @@ pdfplumber
 python-dotenv
 pydrive2
 oauth2client
+gspread
+gspread-dataframe
+google-auth
