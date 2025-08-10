@@ -150,31 +150,38 @@ if uploaded_file and password:
         else:
             st.info(f"ℹ️ Cartola ya existe para el periodo {periodo_referencia}. No se guardó nuevamente.")
 
-        with st.expander("☁️ Exportar a Google Drive"):
-            # Opción recomendada: usar un nombre fijo ya pre-creado y compartido (evita error de cuota del SA)
-            drive_title_default = "cartola_latest.csv"
-            drive_title = st.text_input(
-                "Nombre del archivo en Drive (debe existir en la carpeta LOOKER):",
-                value=drive_title_default,
-                help="Crea este CSV una vez en tu Drive → carpeta LOOKER, compártelo con la Service Account (Editor) y aquí solo lo actualizamos."
+        with st.expander("🗂️ Exportar a Google Sheets"):
+            # Lee defaults de Secrets si existen
+            default_sheet_id = st.secrets.get("GOOGLE_SHEETS_SPREADSHEET_ID", "").strip()
+            spreadsheet_id = st.text_input(
+                "Spreadsheet ID (de tu Google Sheet ya creado y compartido con la SA):",
+                value=default_sheet_id,
+                help="Pega el ID de la URL del Sheet. Ej: https://docs.google.com/spreadsheets/d/ID/edit"
+            )
+            worksheet_title = st.text_input(
+                "Nombre de la hoja (worksheet) a actualizar:",
+                value="cartola",
+                help="Si no existe, la creamos dentro del mismo Spreadsheet."
             )
 
-            # Si configuraste el ID del archivo en Secrets, lo usamos (más robusto que buscar por nombre)
-            drive_file_id = st.secrets.get("GOOGLE_DRIVE_FILE_ID", "").strip()
-            if drive_file_id:
-                st.caption("🔒 Se detectó GOOGLE_DRIVE_FILE_ID en Secrets. Se actualizará por ID (ignora el nombre).")
-
-            if st.button("Subir/actualizar CSV en carpeta LOOKER"):
+            if st.button("Actualizar Google Sheet"):
                 try:
-                    file_id = upload_csv_to_drive(nombre_archivo, drive_title)
-                    st.success(f"☁️ CSV actualizado en Drive. File ID: {file_id}")
-                    st.caption("En Looker Studio apunta a este archivo. Con nombre fijo (p. ej. cartola_latest.csv) no tendrás que reconfigurar nada.")
+                    sheet_url = update_sheet_with_dataframe(
+                        df=df,
+                        spreadsheet_id=spreadsheet_id or None,  # usa Secrets si el input viene vacío
+                        worksheet_title=worksheet_title,
+                        include_index=False
+                    )
+                    st.success("✅ Google Sheet actualizado.")
+                    st.caption(f"Hoja: **{worksheet_title}**")
+                    st.write(f"[Abrir Google Sheet]({sheet_url})")
+                    st.info("En Looker Studio conecta **Google Sheets** a este Spreadsheet (worksheet = la pestaña que elegiste).")
                 except Exception as e:
-                    st.error(f"❌ Error subiendo a Drive: {e}")
+                    st.error(f"❌ Error actualizando Google Sheets: {e}")
                     st.info(
-                        "Tips: 1) Pre-crea el archivo en Drive y compártelo con la Service Account (Editor). "
-                        "2) O usa un Shared Drive y dale permisos a la SA. "
-                        "3) Mejor: define GOOGLE_DRIVE_FILE_ID en Secrets para actualizar directo por ID."
+                        "Check: 1) Habilitaste Google Sheets API y Drive API. "
+                        "2) El Spreadsheet ID es correcto. "
+                        "3) Compartiste el Sheet con la Service Account (Editor)."
                     )
     except Exception as e:
         st.error(f"❌ Error procesando la cartola: {e}")
@@ -264,4 +271,5 @@ else:
                  alt.Tooltip("Gasto Neto", format=",.0f")]
     ).properties(width=800, height=400)
     st.altair_chart(grafico, use_container_width=True)
+
 
