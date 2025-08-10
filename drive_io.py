@@ -67,13 +67,23 @@ def upload_csv_to_drive(local_path: str, drive_title: str) -> str:
     """
     Sube (o actualiza) un CSV a Google Drive dentro de la carpeta configurada.
     - local_path: ruta local al CSV (ya existente)
-    - drive_title: nombre del archivo en Drive (p.ej. 'cartola_2025-08-10.csv' o 'cartola_latest.csv')
+    - drive_title: nombre del archivo en Drive (p.ej. 'cartola_latest.csv')
     Retorna: file_id del archivo en Drive.
     """
     if not os.path.exists(local_path):
         raise FileNotFoundError(f"No existe el archivo local: {local_path}")
 
     drive = _drive_client()
+
+    # 1️⃣ Si hay ID fijo en Secrets, actualizamos por ID
+    drive_file_id = st.secrets.get("GOOGLE_DRIVE_FILE_ID", "").strip()
+    if drive_file_id:
+        gfile = drive.CreateFile({"id": drive_file_id})
+        gfile.SetContentFile(local_path)
+        gfile.Upload()
+        return gfile["id"]
+
+    # 2️⃣ Si no hay ID, buscamos la carpeta
     folder_id = _ensure_folder_id(drive)
 
     # ¿Existe ya un archivo con ese nombre dentro de la carpeta?
@@ -86,7 +96,7 @@ def upload_csv_to_drive(local_path: str, drive_title: str) -> str:
         gfile.Upload()
         return gfile["id"]
 
-    # Crear nuevo
+    # 3️⃣ Crear nuevo archivo (solo funcionará si es Shared Drive o tu cuenta permite creación)
     gfile = drive.CreateFile({
         "title": drive_title,
         "parents": [{"id": folder_id}],
