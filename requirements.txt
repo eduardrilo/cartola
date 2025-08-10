@@ -4,3 +4,5 @@ altair
 plotly
 pdfplumber
 python-dotenv
+pydrive2
+oauth2client
