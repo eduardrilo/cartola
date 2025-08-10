@@ -150,28 +150,15 @@ if uploaded_file and password:
         else:
             st.info(f"ℹ️ Cartola ya existe para el periodo {periodo_referencia}. No se guardó nuevamente.")
 
-       with st.expander("☁️ Exportar a Google Drive"):
-            # Nombre fijo en Drive que ya creaste y compartiste con la Service Account (Editor)
-            # TIP: Déjalo como "cartola_latest.csv" y en Looker apuntas a ese siempre.
-            drive_title_default = "cartola_latest.csv"
-            drive_title = st.text_input("Nombre del archivo en Drive (debe existir):", drive_title_default)
-        
-            # Si pusiste el ID del archivo en Secrets, lo mostramos como referencia
-            drive_file_id = st.secrets.get("GOOGLE_DRIVE_FILE_ID", "").strip()
-            if drive_file_id:
-                st.caption(f"Usando GOOGLE_DRIVE_FILE_ID de Secrets (preferido). Se ignorará el nombre y se actualizará por ID.")
-        
-            subir = st.button("Subir/actualizar CSV en carpeta LOOKER")
-            if subir:
+        with st.expander("☁️ Exportar a Google Drive"):
+            drive_title = f"cartola_{periodo_referencia}.csv"  # nombre final en Drive
+            if st.button("Subir/actualizar CSV en carpeta LOOKER"):
                 try:
-                    # Subimos actualizando: si existe por ID lo toma de Secrets; si no, busca por nombre dentro de la carpeta
                     file_id = upload_csv_to_drive(nombre_archivo, drive_title)
-                    st.success(f"☁️ CSV actualizado en Drive. File ID: {file_id}")
-                    st.caption("En Looker Studio apunta a este archivo en tu Drive. Si usas un nombre fijo (p. ej. cartola_latest.csv), no tendrás que reconfigurar la fuente.")
+                    st.success(f"☁️ Subido a Drive (LOOKER). File ID: {file_id}")
+                    st.caption("En Looker Studio selecciona este CSV desde Google Drive.")
                 except Exception as e:
                     st.error(f"❌ Error subiendo a Drive: {e}")
-                    st.info("Recuerda: las Service Accounts no pueden CREAR archivos en 'Mi unidad'. Debes pre-crear el CSV en la carpeta LOOKER y compartirlo con el Service Account (Editor). Opcional: define GOOGLE_DRIVE_FILE_ID en Secrets para actualizar por ID.")
-
     except Exception as e:
         st.error(f"❌ Error procesando la cartola: {e}")
 
@@ -260,6 +247,3 @@ else:
                  alt.Tooltip("Gasto Neto", format=",.0f")]
     ).properties(width=800, height=400)
     st.altair_chart(grafico, use_container_width=True)
-
-
-
