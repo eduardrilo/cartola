@@ -151,14 +151,31 @@ if uploaded_file and password:
             st.info(f"ℹ️ Cartola ya existe para el periodo {periodo_referencia}. No se guardó nuevamente.")
 
         with st.expander("☁️ Exportar a Google Drive"):
-            drive_title = f"cartola_{periodo_referencia}.csv"  # nombre final en Drive
+            # Opción recomendada: usar un nombre fijo ya pre-creado y compartido (evita error de cuota del SA)
+            drive_title_default = "cartola_latest.csv"
+            drive_title = st.text_input(
+                "Nombre del archivo en Drive (debe existir en la carpeta LOOKER):",
+                value=drive_title_default,
+                help="Crea este CSV una vez en tu Drive → carpeta LOOKER, compártelo con la Service Account (Editor) y aquí solo lo actualizamos."
+            )
+
+            # Si configuraste el ID del archivo en Secrets, lo usamos (más robusto que buscar por nombre)
+            drive_file_id = st.secrets.get("GOOGLE_DRIVE_FILE_ID", "").strip()
+            if drive_file_id:
+                st.caption("🔒 Se detectó GOOGLE_DRIVE_FILE_ID en Secrets. Se actualizará por ID (ignora el nombre).")
+
             if st.button("Subir/actualizar CSV en carpeta LOOKER"):
                 try:
                     file_id = upload_csv_to_drive(nombre_archivo, drive_title)
-                    st.success(f"☁️ Subido a Drive (LOOKER). File ID: {file_id}")
-                    st.caption("En Looker Studio selecciona este CSV desde Google Drive.")
+                    st.success(f"☁️ CSV actualizado en Drive. File ID: {file_id}")
+                    st.caption("En Looker Studio apunta a este archivo. Con nombre fijo (p. ej. cartola_latest.csv) no tendrás que reconfigurar nada.")
                 except Exception as e:
                     st.error(f"❌ Error subiendo a Drive: {e}")
+                    st.info(
+                        "Tips: 1) Pre-crea el archivo en Drive y compártelo con la Service Account (Editor). "
+                        "2) O usa un Shared Drive y dale permisos a la SA. "
+                        "3) Mejor: define GOOGLE_DRIVE_FILE_ID en Secrets para actualizar directo por ID."
+                    )
     except Exception as e:
         st.error(f"❌ Error procesando la cartola: {e}")
 
@@ -247,3 +264,4 @@ else:
                  alt.Tooltip("Gasto Neto", format=",.0f")]
     ).properties(width=800, height=400)
     st.altair_chart(grafico, use_container_width=True)
+
